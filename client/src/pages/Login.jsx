@@ -11,16 +11,23 @@ export default function Login() {
   const [error, setError] = useState(null);
   const [submitting, setSubmitting] = useState(false);
 
-  const from = location.state?.from || '/';
+  const from = location.state?.from;
   const successMessage = location.state?.message;
+
+  function defaultPathForRole(role) {
+    if (role === 'admin') return '/admin';
+    if (role === 'authority') return '/';
+    return '/';
+  }
 
   async function handleSubmit(e) {
     e.preventDefault();
     setError(null);
     setSubmitting(true);
     try {
-      await login(email, password);
-      navigate(from, { replace: true });
+      const loggedInUser = await login(email, password);
+      const destination = from || defaultPathForRole(loggedInUser.role);
+      navigate(destination, { replace: true });
     } catch (err) {
       setError(err.message);
     } finally {

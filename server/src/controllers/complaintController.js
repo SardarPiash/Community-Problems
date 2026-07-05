@@ -1,7 +1,9 @@
 const mongoose = require('mongoose');
 const Complaint = require('../models/Complaint');
+const User = require('../models/User');
 const { CATEGORIES, STATUSES } = require('../models/Complaint');
 const { generateComplaintId } = require('../utils/complaintId');
+const { applyStatusChange } = require('../utils/statusChange');
 
 function sanitizeComplaint(complaint) {
   return {
@@ -15,6 +17,21 @@ function sanitizeComplaint(complaint) {
     status: complaint.status,
     createdAt: complaint.createdAt,
     updatedAt: complaint.updatedAt,
+  };
+}
+
+function sanitizeComplaintListItem(complaint) {
+  const citizen = complaint.citizenId;
+  const authority = complaint.assignedAuthorityId;
+
+  return {
+    ...sanitizeComplaint(complaint),
+    citizen: citizen
+      ? { id: citizen._id, name: citizen.name, email: citizen.email }
+      : null,
+    assignedAuthority: authority
+      ? { id: authority._id, name: authority.name, email: authority.email }
+      : null,
   };
 }
 
@@ -35,15 +52,23 @@ function sanitizeStatusHistoryEntry(entry) {
 }
 
 function sanitizeComplaintDetail(complaint) {
+  const citizen = complaint.citizenId;
+  const authority = complaint.assignedAuthorityId;
+
   return {
     ...sanitizeComplaint(complaint),
+    citizen: citizen
+      ? { id: citizen._id, name: citizen.name, email: citizen.email }
+      : null,
+    assignedAuthority: authority
+      ? { id: authority._id, name: authority.name, email: authority.email }
+      : null,
     statusHistory: (complaint.statusHistory || []).map(sanitizeStatusHistoryEntry),
   };
 }
 
 function buildMineFilter(req) {
   const filter = { citizenId: req.user._id };
-
   const { status, category, search } = req.query;
 
   if (status) {
@@ -58,6 +83,62 @@ function buildMineFilter(req) {
       return { error: 'Invalid category filter' };
     }
     filter.category = category;
+  }
+
+  if (search?.trim()) {
+    const term = search.trim();
+    filter.$or = [
+      { title: { $regex: term, $options: 'i' } },
+      { complaintId: { $regex: term, $options: 'i' } },
+      { location: { $regex: term, $options: 'i' } },
+    ];
+  }
+
+  return { filter };
+}
+
+function buildAdminFilter(req) {
+  const filter = {};
+  const { status, category, authority, dateFrom, dateTo, search } = req.query;
+
+  if (status) {
+    if (!STATUSES.includes(status)) {
+      return { error: 'Invalid status filter' };
+    }
+    filter.status = status;
+  }
+
+  if (category) {
+    if (!CATEGORIES.includes(category)) {
+      return { error: 'Invalid category filter' };
+    }
+    filter.category = category;
+  }
+
+  if (authority) {
+    if (!mongoose.Types.ObjectId.isValid(authority)) {
+      return { error: 'Invalid authority filter' };
+    }
+    filter.assignedAuthorityId = authority;
+  }
+
+  if (dateFrom || dateTo) {
+    filter.createdAt = {};
+    if (dateFrom) {
+      const from = new Date(dateFrom);
+      if (Number.isNaN(from.getTime())) {
+        return { error: 'Invalid dateFrom' };
+      }
+      filter.createdAt.$gte = from;
+    }
+    if (dateTo) {
+      const to = new Date(dateTo);
+      if (Number.isNaN(to.getTime())) {
+        return { error: 'Invalid dateTo' };
+      }
+      to.setHours(23, 59, 59, 999);
+      filter.createdAt.$lte = to;
+    }
   }
 
   if (search?.trim()) {
@@ -89,6 +170,13 @@ function canAccessComplaint(complaint, user) {
   }
 
   return false;
+}
+
+async function loadComplaintDetail(id) {
+  return Complaint.findById(id)
+    .populate('citizenId', 'name email')
+    .populate('assignedAuthorityId', 'name email')
+    .populate('statusHistory.changedBy', 'name role');
 }
 
 exports.createComplaint = async (req, res, next) => {
@@ -153,16 +241,31 @@ exports.getMyComplaints = async (req, res, next) => {
   }
 };
 
+exports.listAllComplaints = async (req, res, next) => {
+  try {
+    const { filter, error } = buildAdminFilter(req);
+    if (error) {
+      return res.status(400).json({ message: error });
+    }
+
+    const complaints = await Complaint.find(filter)
+      .populate('citizenId', 'name email')
+      .populate('assignedAuthorityId', 'name email')
+      .sort({ createdAt: -1 });
+
+    res.json({ complaints: complaints.map(sanitizeComplaintListItem) });
+  } catch (err) {
+    next(err);
+  }
+};
+
 exports.getComplaintById = async (req, res, next) => {
   try {
     if (!mongoose.Types.ObjectId.isValid(req.params.id)) {
       return res.status(400).json({ message: 'Invalid complaint ID' });
     }
 
-    const complaint = await Complaint.findById(req.params.id).populate(
-      'statusHistory.changedBy',
-      'name role'
-    );
+    const complaint = await loadComplaintDetail(req.params.id);
 
     if (!complaint) {
       return res.status(404).json({ message: 'Complaint not found' });
@@ -178,20 +281,86 @@ exports.getComplaintById = async (req, res, next) => {
   }
 };
 
+exports.verifyComplaint = async (req, res, next) => {
+  try {
+    const { decision, reason } = req.body;
+
+    if (!['verified', 'rejected'].includes(decision)) {
+      return res.status(400).json({ message: 'Decision must be verified or rejected' });
+    }
+
+    if (decision === 'rejected' && !reason?.trim()) {
+      return res.status(400).json({ message: 'Rejection reason is required' });
+    }
+
+    const complaint = await Complaint.findById(req.params.id);
+    if (!complaint) {
+      return res.status(404).json({ message: 'Complaint not found' });
+    }
+
+    if (complaint.status !== 'Pending Verification') {
+      return res.status(400).json({ message: 'Only pending complaints can be verified or rejected' });
+    }
+
+    const newStatus = decision === 'verified' ? 'Verified' : 'Rejected';
+    const note = decision === 'rejected' ? reason.trim() : 'Verified by admin';
+
+    await applyStatusChange(complaint, {
+      status: newStatus,
+      changedBy: req.user._id,
+      note,
+    });
+
+    const updated = await loadComplaintDetail(complaint._id);
+    res.json({ complaint: sanitizeComplaintDetail(updated) });
+  } catch (err) {
+    next(err);
+  }
+};
+
+exports.assignComplaint = async (req, res, next) => {
+  try {
+    const { authorityId } = req.body;
+
+    if (!authorityId || !mongoose.Types.ObjectId.isValid(authorityId)) {
+      return res.status(400).json({ message: 'Valid authorityId is required' });
+    }
+
+    const authority = await User.findOne({
+      _id: authorityId,
+      role: 'authority',
+      status: 'active',
+    });
+
+    if (!authority) {
+      return res.status(404).json({ message: 'Authority not found or inactive' });
+    }
+
+    const complaint = await Complaint.findById(req.params.id);
+    if (!complaint) {
+      return res.status(404).json({ message: 'Complaint not found' });
+    }
+
+    if (complaint.status !== 'Verified') {
+      return res.status(400).json({ message: 'Only verified complaints can be assigned' });
+    }
+
+    complaint.assignedAuthorityId = authority._id;
+    await applyStatusChange(complaint, {
+      status: 'Assigned',
+      changedBy: req.user._id,
+      note: `Assigned to ${authority.name}`,
+    });
+
+    const updated = await loadComplaintDetail(complaint._id);
+    res.json({ complaint: sanitizeComplaintDetail(updated) });
+  } catch (err) {
+    next(err);
+  }
+};
+
 exports.getAssignedComplaints = (req, res) => {
   res.status(501).json({ message: 'Not implemented: GET /api/complaints/assigned (Stage 7, FR-5.1)' });
-};
-
-exports.listAllComplaints = (req, res) => {
-  res.status(501).json({ message: 'Not implemented: GET /api/complaints (Stage 6, FR-4.1)' });
-};
-
-exports.verifyComplaint = (req, res) => {
-  res.status(501).json({ message: 'Not implemented: PUT /api/complaints/:id/verify (Stage 6, FR-4.2)' });
-};
-
-exports.assignComplaint = (req, res) => {
-  res.status(501).json({ message: 'Not implemented: PUT /api/complaints/:id/assign (Stage 6, FR-4.3)' });
 };
 
 exports.updateComplaintStatus = (req, res) => {

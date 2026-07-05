@@ -1,6 +1,7 @@
 import { Routes, Route } from 'react-router-dom';
 import Layout from './components/Layout.jsx';
 import ProtectedRoute from './components/ProtectedRoute.jsx';
+import AdminRoute from './components/AdminRoute.jsx';
 import Home from './pages/Home.jsx';
 import Login from './pages/Login.jsx';
 import Register from './pages/Register.jsx';
@@ -10,6 +11,7 @@ import Profile from './pages/Profile.jsx';
 import SubmitComplaint from './pages/SubmitComplaint.jsx';
 import MyComplaints from './pages/MyComplaints.jsx';
 import ComplaintDetail from './pages/ComplaintDetail.jsx';
+import AdminDashboard from './pages/admin/AdminDashboard.jsx';
 import Placeholder from './pages/Placeholder.jsx';
 
 export default function App() {
@@ -21,6 +23,14 @@ export default function App() {
         <Route path="/register" element={<Register />} />
         <Route path="/forgot-password" element={<ForgotPassword />} />
         <Route path="/reset-password" element={<ResetPassword />} />
+        <Route
+          path="/admin"
+          element={
+            <AdminRoute>
+              <AdminDashboard />
+            </AdminRoute>
+          }
+        />
         <Route
           path="/profile"
           element={

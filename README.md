@@ -59,7 +59,7 @@ Open http://localhost:5173 — the client proxies `/api/*` to the server.
 | Users | `/api/users` | **Stage 2** — `/me` profile; admin list in Stage 6 |
 | Complaints | `/api/complaints` | **Stage 3–4** — submit + citizen tracking; admin/authority in Stages 6–7 |
 | Notifications | `/api/notifications` | **Stage 4** — list (FR-3.3); mark read in Stage 7 |
-| Analytics | `/api/analytics` | Stubs (Stage 8), admin JWT + RBAC |
+| Analytics | `/api/analytics` | **Stage 6** — admin summary (FR-4.5); CSV export in Stage 8 |
 
 ### Auth endpoints (Stage 2)
 
@@ -103,3 +103,16 @@ npm run seed
 
 Creates admin, authority, and citizen test accounts plus sample complaints in varied statuses.  
 **Credentials:** see [`docs/SEED.md`](docs/SEED.md).
+
+### Admin dashboard (Stage 6)
+
+Log in as `admin@cprs.local` → http://localhost:5173/admin
+
+| Method | Route | Access |
+|--------|-------|--------|
+| GET | `/api/complaints` | Admin — all complaints; filters: status, category, authority, dateFrom, dateTo, search |
+| PUT | `/api/complaints/:id/verify` | Admin — body: `{ decision: "verified" \| "rejected", reason? }` |
+| PUT | `/api/complaints/:id/assign` | Admin — body: `{ authorityId }` (verified complaints only) |
+| GET | `/api/users` | Admin — list citizen & authority accounts; `?role=citizen\|authority` |
+| PUT | `/api/users/:id/status` | Admin — body: `{ status: "active" \| "disabled" }` |
+| GET | `/api/analytics/summary` | Admin — volume by category/status, resolved %, avg resolution days |

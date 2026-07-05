@@ -2,15 +2,32 @@ import { useState } from 'react';
 import { Link, NavLink, Outlet } from 'react-router-dom';
 import { useAuth } from '../context/AuthContext.jsx';
 
-const navLinks = [
+const citizenLinks = [
   { to: '/', label: 'Home' },
   { to: '/complaints', label: 'My Complaints' },
   { to: '/complaints/new', label: 'Submit Complaint' },
 ];
 
+const adminLinks = [
+  { to: '/', label: 'Home' },
+  { to: '/admin', label: 'Admin Dashboard' },
+];
+
+const authorityLinks = [
+  { to: '/', label: 'Home' },
+  { to: '/assigned', label: 'Assigned Complaints' },
+];
+
+function getNavLinks(role) {
+  if (role === 'admin') return adminLinks;
+  if (role === 'authority') return authorityLinks;
+  return citizenLinks;
+}
+
 export default function Layout() {
   const { user, logout } = useAuth();
   const [menuOpen, setMenuOpen] = useState(false);
+  const navLinks = getNavLinks(user?.role);
 
   const linkClass = ({ isActive }) =>
     `block rounded-md px-3 py-2 text-sm font-medium transition-colors ${
@@ -55,7 +72,6 @@ export default function Layout() {
             CPRS
           </Link>
 
-          {/* Desktop nav */}
           <div className="hidden items-center gap-1 md:flex">
             {navLinks.map((link) => (
               <NavLink key={link.to} to={link.to} className={linkClass} end={link.to === '/'}>
@@ -65,7 +81,6 @@ export default function Layout() {
             {authLinks}
           </div>
 
-          {/* Mobile menu button */}
           <button
             type="button"
             className="rounded-md p-2 text-blue-100 hover:bg-blue-700 md:hidden"
@@ -82,7 +97,6 @@ export default function Layout() {
           </button>
         </nav>
 
-        {/* Mobile nav */}
         {menuOpen && (
           <div className="space-y-1 px-4 pb-3 md:hidden">
             {navLinks.map((link) => (
