@@ -1,5 +1,6 @@
 import { useState } from 'react';
 import { Link, NavLink, Outlet } from 'react-router-dom';
+import { useAuth } from '../context/AuthContext.jsx';
 
 const navLinks = [
   { to: '/', label: 'Home' },
@@ -8,6 +9,7 @@ const navLinks = [
 ];
 
 export default function Layout() {
+  const { user, logout } = useAuth();
   const [menuOpen, setMenuOpen] = useState(false);
 
   const linkClass = ({ isActive }) =>
@@ -16,6 +18,34 @@ export default function Layout() {
         ? 'bg-blue-700 text-white'
         : 'text-blue-100 hover:bg-blue-600 hover:text-white'
     }`;
+
+  const authLinks = user ? (
+    <>
+      <NavLink to="/profile" className={linkClass}>
+        Profile
+      </NavLink>
+      <span className="hidden px-2 text-sm text-blue-200 md:inline">{user.name}</span>
+      <button
+        type="button"
+        onClick={logout}
+        className="rounded-md px-3 py-2 text-sm font-medium text-blue-100 hover:bg-blue-600 hover:text-white"
+      >
+        Logout
+      </button>
+    </>
+  ) : (
+    <>
+      <NavLink to="/login" className={linkClass}>
+        Login
+      </NavLink>
+      <NavLink
+        to="/register"
+        className="ml-2 rounded-md bg-white px-3 py-2 text-sm font-semibold text-blue-800 hover:bg-blue-50"
+      >
+        Register
+      </NavLink>
+    </>
+  );
 
   return (
     <div className="flex min-h-screen flex-col bg-gray-50">
@@ -32,15 +62,7 @@ export default function Layout() {
                 {link.label}
               </NavLink>
             ))}
-            <NavLink to="/login" className={linkClass}>
-              Login
-            </NavLink>
-            <NavLink
-              to="/register"
-              className="ml-2 rounded-md bg-white px-3 py-2 text-sm font-semibold text-blue-800 hover:bg-blue-50"
-            >
-              Register
-            </NavLink>
+            {authLinks}
           </div>
 
           {/* Mobile menu button */}
@@ -74,12 +96,7 @@ export default function Layout() {
                 {link.label}
               </NavLink>
             ))}
-            <NavLink to="/login" className={linkClass} onClick={() => setMenuOpen(false)}>
-              Login
-            </NavLink>
-            <NavLink to="/register" className={linkClass} onClick={() => setMenuOpen(false)}>
-              Register
-            </NavLink>
+            <div onClick={() => setMenuOpen(false)}>{authLinks}</div>
           </div>
         )}
       </header>

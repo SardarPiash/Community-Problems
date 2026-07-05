@@ -1,6 +1,8 @@
 const router = require('express').Router();
 const analytics = require('../controllers/analyticsController');
+const { authenticate } = require('../middleware/auth');
+const { requireRole } = require('../middleware/rbac');
 
-router.get('/summary', analytics.getSummary);
+router.get('/summary', authenticate, requireRole('admin'), analytics.getSummary);
 
 module.exports = router;

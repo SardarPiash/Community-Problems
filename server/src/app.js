@@ -12,6 +12,15 @@ const app = express();
 app.use(cors());
 app.use(express.json());
 
+app.get('/', (req, res) => {
+  res.json({
+    service: 'Community Problem Reporting System API',
+    health: '/api/health',
+    routeGroups: ['/api/auth', '/api/users', '/api/complaints', '/api/notifications', '/api/analytics'],
+    client: 'http://localhost:5173',
+  });
+});
+
 app.get('/api/health', (req, res) => {
   const mongoose = require('mongoose');
   res.json({

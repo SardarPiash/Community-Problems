@@ -55,10 +55,23 @@ Open http://localhost:5173 — the client proxies `/api/*` to the server.
 
 | Group | Base path | Status |
 |-------|-----------|--------|
-| Auth | `/api/auth` | Stubs (Stage 2) |
-| Users | `/api/users` | Stubs (Stage 2/6) |
-| Complaints | `/api/complaints` | Stubs (Stages 3–7) |
-| Notifications | `/api/notifications` | Stubs (Stage 7) |
-| Analytics | `/api/analytics` | Stubs (Stage 8) |
+| Auth | `/api/auth` | **Stage 2** — register, login, forgot/reset password |
+| Users | `/api/users` | **Stage 2** — `/me` profile; admin list in Stage 6 |
+| Complaints | `/api/complaints` | Stubs (Stages 3–7), JWT + RBAC protected |
+| Notifications | `/api/notifications` | Stubs (Stage 7), JWT protected |
+| Analytics | `/api/analytics` | Stubs (Stage 8), admin JWT + RBAC |
 
-All stub endpoints return `501 Not Implemented` with the stage in which they will be built. JWT auth and RBAC middleware are added in Stage 2.
+### Auth endpoints (Stage 2)
+
+| Method | Route | Access |
+|--------|-------|--------|
+| POST | `/api/auth/register` | Public — citizen registration (FR-1.1, FR-1.2) |
+| POST | `/api/auth/login` | Public — returns JWT (FR-1.3) |
+| POST | `/api/auth/forgot-password` | Public — email reset link (FR-1.4) |
+| POST | `/api/auth/reset-password` | Public — set new password with token |
+| GET | `/api/users/me` | JWT — view profile (FR-1.5) |
+| PUT | `/api/users/me` | JWT — edit profile (FR-1.5) |
+
+JWT is sent as `Authorization: Bearer <token>`. Passwords are bcrypt-hashed; RBAC middleware enforces roles server-side (SRS Section 12).
+
+Without SMTP configured, forgot-password reset links are printed to the server console.
