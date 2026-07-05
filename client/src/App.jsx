@@ -7,6 +7,7 @@ import Register from './pages/Register.jsx';
 import ForgotPassword from './pages/ForgotPassword.jsx';
 import ResetPassword from './pages/ResetPassword.jsx';
 import Profile from './pages/Profile.jsx';
+import SubmitComplaint from './pages/SubmitComplaint.jsx';
 import Placeholder from './pages/Placeholder.jsx';
 
 export default function App() {
@@ -38,7 +39,7 @@ export default function App() {
           path="/complaints/new"
           element={
             <ProtectedRoute>
-              <Placeholder title="Submit Complaint" stage="Stage 3" />
+              <SubmitComplaint />
             </ProtectedRoute>
           }
         />

@@ -14,9 +14,12 @@ export function clearToken() {
 
 export async function apiFetch(path, options = {}) {
   const headers = {
-    'Content-Type': 'application/json',
     ...options.headers,
   };
+
+  if (!(options.body instanceof FormData)) {
+    headers['Content-Type'] = 'application/json';
+  }
 
   const token = getToken();
   if (token) {
@@ -31,4 +34,8 @@ export async function apiFetch(path, options = {}) {
   }
 
   return data;
+}
+
+export async function apiUpload(path, formData) {
+  return apiFetch(path, { method: 'POST', body: formData });
 }

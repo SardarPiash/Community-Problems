@@ -57,7 +57,7 @@ Open http://localhost:5173 — the client proxies `/api/*` to the server.
 |-------|-----------|--------|
 | Auth | `/api/auth` | **Stage 2** — register, login, forgot/reset password |
 | Users | `/api/users` | **Stage 2** — `/me` profile; admin list in Stage 6 |
-| Complaints | `/api/complaints` | Stubs (Stages 3–7), JWT + RBAC protected |
+| Complaints | `/api/complaints` | **Stage 3** — `POST /` submit; other routes Stages 4–7 |
 | Notifications | `/api/notifications` | Stubs (Stage 7), JWT protected |
 | Analytics | `/api/analytics` | Stubs (Stage 8), admin JWT + RBAC |
 
@@ -75,3 +75,11 @@ Open http://localhost:5173 — the client proxies `/api/*` to the server.
 JWT is sent as `Authorization: Bearer <token>`. Passwords are bcrypt-hashed; RBAC middleware enforces roles server-side (SRS Section 12).
 
 Without SMTP configured, forgot-password reset links are printed to the server console.
+
+### Complaint submission (Stage 3)
+
+| Method | Route | Access |
+|--------|-------|--------|
+| POST | `/api/complaints` | JWT citizen — multipart form: category, title, description, location, images (up to 3 JPG/PNG, 5MB each) |
+
+Complaint images are stored on local disk under `server/uploads/` and served at `/uploads/<filename>`. New complaints default to status `Pending Verification` with an auto-generated `complaintId` (e.g. `CPRS-20260705-A1B2C3`).
