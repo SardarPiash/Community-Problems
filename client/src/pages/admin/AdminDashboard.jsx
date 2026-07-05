@@ -1,5 +1,5 @@
 import { useCallback, useEffect, useMemo, useState } from 'react';
-import { apiFetch } from '../../api/client.js';
+import { apiFetch, downloadAuthenticatedFile } from '../../api/client.js';
 import StatusBadge from '../../components/StatusBadge.jsx';
 import { COMPLAINT_CATEGORIES } from '../../constants/categories.js';
 import { COMPLAINT_STATUSES } from '../../constants/statuses.js';
@@ -450,6 +450,9 @@ function AnalyticsTab() {
   const [summary, setSummary] = useState(null);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState(null);
+  const [exportDates, setExportDates] = useState({ dateFrom: '', dateTo: '' });
+  const [exporting, setExporting] = useState(false);
+  const [exportError, setExportError] = useState(null);
 
   useEffect(() => {
     async function load() {
@@ -464,6 +467,23 @@ function AnalyticsTab() {
     }
     load();
   }, []);
+
+  async function handleExportCsv() {
+    setExporting(true);
+    setExportError(null);
+    try {
+      const params = new URLSearchParams();
+      if (exportDates.dateFrom) params.set('dateFrom', exportDates.dateFrom);
+      if (exportDates.dateTo) params.set('dateTo', exportDates.dateTo);
+      const qs = params.toString();
+      const path = qs ? `/api/analytics/export?${qs}` : '/api/analytics/export';
+      await downloadAuthenticatedFile(path, `cprs-complaints-${new Date().toISOString().slice(0, 10)}.csv`);
+    } catch (err) {
+      setExportError(err.message);
+    } finally {
+      setExporting(false);
+    }
+  }
 
   if (loading) return <p className="text-sm text-gray-500">Loading analytics…</p>;
   if (error) return <div className="rounded-md bg-red-50 px-3 py-2 text-sm text-red-700">{error}</div>;
@@ -509,6 +529,44 @@ function AnalyticsTab() {
               </li>
             ))}
           </ul>
+        </div>
+      </div>
+
+      <div className="rounded-lg border border-gray-200 bg-white p-4 shadow-sm">
+        <h3 className="font-semibold text-gray-900">Export report (CSV)</h3>
+        <p className="mt-1 text-sm text-gray-600">
+          Download a complaint summary filtered by date range (FR-7.1).
+        </p>
+        {exportError && (
+          <div className="mt-3 rounded-md bg-red-50 px-3 py-2 text-sm text-red-700">{exportError}</div>
+        )}
+        <div className="mt-3 flex flex-col gap-3 sm:flex-row sm:items-end">
+          <div>
+            <label className="block text-xs font-medium text-gray-600">From</label>
+            <input
+              type="date"
+              value={exportDates.dateFrom}
+              onChange={(e) => setExportDates((prev) => ({ ...prev, dateFrom: e.target.value }))}
+              className="mt-1 rounded-md border border-gray-300 px-3 py-2 text-sm"
+            />
+          </div>
+          <div>
+            <label className="block text-xs font-medium text-gray-600">To</label>
+            <input
+              type="date"
+              value={exportDates.dateTo}
+              onChange={(e) => setExportDates((prev) => ({ ...prev, dateTo: e.target.value }))}
+              className="mt-1 rounded-md border border-gray-300 px-3 py-2 text-sm"
+            />
+          </div>
+          <button
+            type="button"
+            disabled={exporting}
+            onClick={handleExportCsv}
+            className="rounded-md bg-blue-800 px-4 py-2 text-sm font-semibold text-white hover:bg-blue-700 disabled:opacity-60"
+          >
+            {exporting ? 'Exporting…' : 'Export CSV'}
+          </button>
         </div>
       </div>
     </div>

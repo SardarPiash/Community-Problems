@@ -7,20 +7,19 @@ Requirements source of truth: `docs/SRS.md`.
 ## Structure
 
 ```
-shihab/
+Community-Problems/
 ├── client/                 # React SPA (Vite + Tailwind CSS)
 │   └── src/
-│       ├── components/     # Shared layout/UI components
-│       └── pages/          # Route pages
 ├── server/                 # Express REST API (MVC)
 │   └── src/
-│       ├── config/         # DB connection
-│       ├── controllers/    # Request handlers
-│       ├── models/         # Mongoose models (User, Complaint, Notification)
-│       ├── routes/         # Route groups per SRS Section 10
-│       ├── app.js          # Express app (middleware + routes)
-│       └── server.js       # Entry point
-└── docs/SRS.md             # Requirements specification
+├── docs/
+│   ├── SRS.md              # Requirements specification
+│   ├── SEED.md             # Test account credentials
+│   ├── ACCEPTANCE.md       # UAT checklist (SRS Section 15)
+│   ├── DEPLOYMENT.md       # Production deployment notes
+│   └── postman/            # Postman collection
+├── PROMPT.md               # Staged build instructions
+└── README.md
 ```
 
 ## Prerequisites
@@ -74,7 +73,7 @@ Creates admin, authority, and citizen test accounts plus sample complaints in va
 | Users | `/api/users` | **Stage 2** — `/me` profile; admin list in Stage 6 |
 | Complaints | `/api/complaints` | **Stage 3–4** — submit + citizen tracking; admin/authority in Stages 6–7 |
 | Notifications | `/api/notifications` | **Stage 4/7** — list + mark read (FR-6.2) |
-| Analytics | `/api/analytics` | **Stage 6** — admin summary (FR-4.5); CSV export in Stage 8 |
+| Analytics | `/api/analytics` | **Stage 6/8** — summary (FR-4.5, FR-7.2) + CSV export (FR-7.1) |
 
 ### Auth endpoints (Stage 2)
 
@@ -133,3 +132,35 @@ Log in as `authority.roads@cprs.local` → http://localhost:5173/assigned
 | PUT | `/api/notifications/:id/read` | Authenticated — mark notification as read |
 
 Status updates append to `statusHistory`, notify the citizen in-app, and optionally email when SMTP is configured (FR-6.3).
+
+### Reports & analytics (Stage 8)
+
+Admin → **Analytics** tab at http://localhost:5173/admin
+
+| Method | Route | Access |
+|--------|-------|--------|
+| GET | `/api/analytics/summary` | Admin — total complaints, resolved %, avg resolution days, breakdowns |
+| GET | `/api/analytics/export` | Admin — CSV download; query: `dateFrom`, `dateTo` (ISO dates) |
+
+## Documentation
+
+| Document | Purpose |
+|----------|---------|
+| [`docs/SRS.md`](docs/SRS.md) | Requirements specification |
+| [`docs/SEED.md`](docs/SEED.md) | Test credentials — run **`cd server && npm run seed`** |
+| [`docs/ACCEPTANCE.md`](docs/ACCEPTANCE.md) | UAT checklist (SRS Section 15) |
+| [`docs/DEPLOYMENT.md`](docs/DEPLOYMENT.md) | Production deployment guide |
+| [`docs/postman/CPRS.postman_collection.json`](docs/postman/CPRS.postman_collection.json) | Postman API collection |
+
+## Deployment (production)
+
+See [`docs/DEPLOYMENT.md`](docs/DEPLOYMENT.md) for environment variables, build steps, Nginx proxy example, HTTPS, and MongoDB notes.
+
+**Quick production build:**
+
+```bash
+cd server && npm ci && npm start          # API on PORT (default 5000)
+cd client && npm ci && npm run build      # static files in client/dist/
+```
+
+Do **not** run `npm run seed` in production.
