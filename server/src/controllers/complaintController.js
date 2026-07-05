@@ -1,5 +1,6 @@
+const mongoose = require('mongoose');
 const Complaint = require('../models/Complaint');
-const { CATEGORIES } = require('../models/Complaint');
+const { CATEGORIES, STATUSES } = require('../models/Complaint');
 const { generateComplaintId } = require('../utils/complaintId');
 
 function sanitizeComplaint(complaint) {
@@ -15,6 +16,79 @@ function sanitizeComplaint(complaint) {
     createdAt: complaint.createdAt,
     updatedAt: complaint.updatedAt,
   };
+}
+
+function sanitizeStatusHistoryEntry(entry) {
+  const changedBy = entry.changedBy;
+  return {
+    status: entry.status,
+    note: entry.note || '',
+    timestamp: entry.timestamp,
+    changedBy: changedBy
+      ? {
+          id: changedBy._id || changedBy,
+          name: changedBy.name || null,
+          role: changedBy.role || null,
+        }
+      : null,
+  };
+}
+
+function sanitizeComplaintDetail(complaint) {
+  return {
+    ...sanitizeComplaint(complaint),
+    statusHistory: (complaint.statusHistory || []).map(sanitizeStatusHistoryEntry),
+  };
+}
+
+function buildMineFilter(req) {
+  const filter = { citizenId: req.user._id };
+
+  const { status, category, search } = req.query;
+
+  if (status) {
+    if (!STATUSES.includes(status)) {
+      return { error: 'Invalid status filter' };
+    }
+    filter.status = status;
+  }
+
+  if (category) {
+    if (!CATEGORIES.includes(category)) {
+      return { error: 'Invalid category filter' };
+    }
+    filter.category = category;
+  }
+
+  if (search?.trim()) {
+    const term = search.trim();
+    filter.$or = [
+      { title: { $regex: term, $options: 'i' } },
+      { complaintId: { $regex: term, $options: 'i' } },
+      { location: { $regex: term, $options: 'i' } },
+    ];
+  }
+
+  return { filter };
+}
+
+function canAccessComplaint(complaint, user) {
+  if (user.role === 'admin') {
+    return true;
+  }
+
+  if (user.role === 'citizen') {
+    return complaint.citizenId.toString() === user._id.toString();
+  }
+
+  if (user.role === 'authority') {
+    return (
+      complaint.assignedAuthorityId &&
+      complaint.assignedAuthorityId.toString() === user._id.toString()
+    );
+  }
+
+  return false;
 }
 
 exports.createComplaint = async (req, res, next) => {
@@ -65,16 +139,47 @@ exports.createComplaint = async (req, res, next) => {
   }
 };
 
-exports.getMyComplaints = (req, res) => {
-  res.status(501).json({ message: 'Not implemented: GET /api/complaints/mine (Stage 4, FR-3.1)' });
+exports.getMyComplaints = async (req, res, next) => {
+  try {
+    const { filter, error } = buildMineFilter(req);
+    if (error) {
+      return res.status(400).json({ message: error });
+    }
+
+    const complaints = await Complaint.find(filter).sort({ createdAt: -1 });
+    res.json({ complaints: complaints.map(sanitizeComplaint) });
+  } catch (err) {
+    next(err);
+  }
+};
+
+exports.getComplaintById = async (req, res, next) => {
+  try {
+    if (!mongoose.Types.ObjectId.isValid(req.params.id)) {
+      return res.status(400).json({ message: 'Invalid complaint ID' });
+    }
+
+    const complaint = await Complaint.findById(req.params.id).populate(
+      'statusHistory.changedBy',
+      'name role'
+    );
+
+    if (!complaint) {
+      return res.status(404).json({ message: 'Complaint not found' });
+    }
+
+    if (!canAccessComplaint(complaint, req.user)) {
+      return res.status(403).json({ message: 'Forbidden' });
+    }
+
+    res.json({ complaint: sanitizeComplaintDetail(complaint) });
+  } catch (err) {
+    next(err);
+  }
 };
 
 exports.getAssignedComplaints = (req, res) => {
   res.status(501).json({ message: 'Not implemented: GET /api/complaints/assigned (Stage 7, FR-5.1)' });
-};
-
-exports.getComplaintById = (req, res) => {
-  res.status(501).json({ message: 'Not implemented: GET /api/complaints/:id (Stage 4, FR-3.2)' });
 };
 
 exports.listAllComplaints = (req, res) => {

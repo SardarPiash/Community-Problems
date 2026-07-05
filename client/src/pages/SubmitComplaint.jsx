@@ -142,10 +142,16 @@ export default function SubmitComplaint() {
             Submit another
           </button>
           <Link
-            to="/"
+            to={`/complaints/${submitted.id}`}
             className="rounded-md border border-blue-800 px-4 py-2 text-sm font-semibold text-blue-800 hover:bg-blue-50"
           >
-            Back to home
+            View details
+          </Link>
+          <Link
+            to="/complaints"
+            className="rounded-md border border-gray-300 px-4 py-2 text-sm font-semibold text-gray-700 hover:bg-gray-50"
+          >
+            My complaints
           </Link>
         </div>
       </div>

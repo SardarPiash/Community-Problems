@@ -1,7 +1,32 @@
-// Notification system (SRS 5.6) — implemented in Stage 7.
+const Notification = require('../models/Notification');
 
-exports.listNotifications = (req, res) => {
-  res.status(501).json({ message: 'Not implemented: GET /api/notifications (Stage 7, FR-6.2)' });
+function sanitizeNotification(notification) {
+  const complaint = notification.complaintId;
+  return {
+    id: notification._id,
+    message: notification.message,
+    isRead: notification.isRead,
+    createdAt: notification.createdAt,
+    complaint: complaint
+      ? {
+          id: complaint._id,
+          complaintId: complaint.complaintId,
+          title: complaint.title,
+        }
+      : null,
+  };
+}
+
+exports.listNotifications = async (req, res, next) => {
+  try {
+    const notifications = await Notification.find({ userId: req.user._id })
+      .sort({ createdAt: -1 })
+      .populate('complaintId', 'complaintId title');
+
+    res.json({ notifications: notifications.map(sanitizeNotification) });
+  } catch (err) {
+    next(err);
+  }
 };
 
 exports.markAsRead = (req, res) => {

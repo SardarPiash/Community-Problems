@@ -57,8 +57,8 @@ Open http://localhost:5173 — the client proxies `/api/*` to the server.
 |-------|-----------|--------|
 | Auth | `/api/auth` | **Stage 2** — register, login, forgot/reset password |
 | Users | `/api/users` | **Stage 2** — `/me` profile; admin list in Stage 6 |
-| Complaints | `/api/complaints` | **Stage 3** — `POST /` submit; other routes Stages 4–7 |
-| Notifications | `/api/notifications` | Stubs (Stage 7), JWT protected |
+| Complaints | `/api/complaints` | **Stage 3–4** — submit + citizen tracking; admin/authority in Stages 6–7 |
+| Notifications | `/api/notifications` | **Stage 4** — list (FR-3.3); mark read in Stage 7 |
 | Analytics | `/api/analytics` | Stubs (Stage 8), admin JWT + RBAC |
 
 ### Auth endpoints (Stage 2)
@@ -83,3 +83,13 @@ Without SMTP configured, forgot-password reset links are printed to the server c
 | POST | `/api/complaints` | JWT citizen — multipart form: category, title, description, location, images (up to 3 JPG/PNG, 5MB each) |
 
 Complaint images are stored on local disk under `server/uploads/` and served at `/uploads/<filename>`. New complaints default to status `Pending Verification` with an auto-generated `complaintId` (e.g. `CPRS-20260705-A1B2C3`).
+
+### Complaint tracking (Stage 4)
+
+| Method | Route | Access |
+|--------|-------|--------|
+| GET | `/api/complaints/mine` | JWT citizen — list own complaints; query: `status`, `category`, `search` |
+| GET | `/api/complaints/:id` | JWT — detail + status timeline (citizen: own only) |
+| GET | `/api/notifications` | JWT — in-app notifications for status changes (FR-3.3) |
+
+Status changes in Stages 6–7 use `server/src/utils/statusChange.js` to append history and create citizen notifications automatically.

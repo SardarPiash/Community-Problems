@@ -8,6 +8,8 @@ import ForgotPassword from './pages/ForgotPassword.jsx';
 import ResetPassword from './pages/ResetPassword.jsx';
 import Profile from './pages/Profile.jsx';
 import SubmitComplaint from './pages/SubmitComplaint.jsx';
+import MyComplaints from './pages/MyComplaints.jsx';
+import ComplaintDetail from './pages/ComplaintDetail.jsx';
 import Placeholder from './pages/Placeholder.jsx';
 
 export default function App() {
@@ -31,7 +33,7 @@ export default function App() {
           path="/complaints"
           element={
             <ProtectedRoute>
-              <Placeholder title="My Complaints" stage="Stage 4" />
+              <MyComplaints />
             </ProtectedRoute>
           }
         />
@@ -40,6 +42,14 @@ export default function App() {
           element={
             <ProtectedRoute>
               <SubmitComplaint />
+            </ProtectedRoute>
+          }
+        />
+        <Route
+          path="/complaints/:id"
+          element={
+            <ProtectedRoute>
+              <ComplaintDetail />
             </ProtectedRoute>
           }
         />
