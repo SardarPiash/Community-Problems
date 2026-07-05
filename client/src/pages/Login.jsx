@@ -16,7 +16,7 @@ export default function Login() {
 
   function defaultPathForRole(role) {
     if (role === 'admin') return '/admin';
-    if (role === 'authority') return '/';
+    if (role === 'authority') return '/assigned';
     return '/';
   }
 

@@ -1,4 +1,6 @@
 const Notification = require('../models/Notification');
+const User = require('../models/User');
+const { sendStatusNotificationEmail } = require('./email');
 
 const STATUS_MESSAGES = {
   Verified: 'Your complaint has been verified.',
@@ -18,6 +20,14 @@ async function notifyCitizenOfStatusChange(citizenId, complaintId, status, custo
     complaintId,
     message,
   });
+
+  // FR-6.3 (Could-have): optional email when SMTP is configured
+  if (process.env.EMAIL_NOTIFICATIONS !== 'false') {
+    const citizen = await User.findById(citizenId).select('email');
+    if (citizen?.email) {
+      await sendStatusNotificationEmail(citizen.email, message);
+    }
+  }
 }
 
 /**

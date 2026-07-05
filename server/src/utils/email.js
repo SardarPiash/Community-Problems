@@ -4,12 +4,9 @@ function isSmtpConfigured() {
   return Boolean(process.env.SMTP_HOST && process.env.SMTP_USER && process.env.SMTP_PASS);
 }
 
-async function sendPasswordResetEmail(to, resetUrl) {
-  const subject = 'CPRS Password Reset';
-  const text = `Reset your password using this link (valid for 1 hour):\n\n${resetUrl}`;
-
+async function sendMail(to, subject, text) {
   if (!isSmtpConfigured()) {
-    console.log(`[CPRS] Password reset link for ${to}: ${resetUrl}`);
+    console.log(`[CPRS] Email to ${to}: ${subject} — ${text}`);
     return;
   }
 
@@ -31,4 +28,20 @@ async function sendPasswordResetEmail(to, resetUrl) {
   });
 }
 
-module.exports = { sendPasswordResetEmail };
+async function sendPasswordResetEmail(to, resetUrl) {
+  const subject = 'CPRS Password Reset';
+  const text = `Reset your password using this link (valid for 1 hour):\n\n${resetUrl}`;
+
+  if (!isSmtpConfigured()) {
+    console.log(`[CPRS] Password reset link for ${to}: ${resetUrl}`);
+    return;
+  }
+
+  await sendMail(to, subject, text);
+}
+
+async function sendStatusNotificationEmail(to, message) {
+  await sendMail(to, 'CPRS Complaint Update', message);
+}
+
+module.exports = { sendPasswordResetEmail, sendStatusNotificationEmail };

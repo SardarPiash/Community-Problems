@@ -54,6 +54,17 @@ export default function MyComplaints() {
     };
   }, [queryString]);
 
+  async function handleMarkRead(notificationId) {
+    try {
+      await apiFetch(`/api/notifications/${notificationId}/read`, { method: 'PUT' });
+      setNotifications((prev) =>
+        prev.map((n) => (n.id === notificationId ? { ...n, isRead: true } : n))
+      );
+    } catch (err) {
+      setError(err.message);
+    }
+  }
+
   return (
     <div className="space-y-8">
       <div className="flex flex-col gap-4 sm:flex-row sm:items-center sm:justify-between">
@@ -157,7 +168,11 @@ export default function MyComplaints() {
 
       <section>
         <h2 className="mb-3 text-lg font-semibold text-gray-900">Notifications</h2>
-        <NotificationList notifications={notifications} loading={loading} />
+        <NotificationList
+          notifications={notifications}
+          loading={loading}
+          onMarkRead={handleMarkRead}
+        />
       </section>
     </div>
   );

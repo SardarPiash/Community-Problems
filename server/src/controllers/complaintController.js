@@ -359,10 +359,69 @@ exports.assignComplaint = async (req, res, next) => {
   }
 };
 
-exports.getAssignedComplaints = (req, res) => {
-  res.status(501).json({ message: 'Not implemented: GET /api/complaints/assigned (Stage 7, FR-5.1)' });
+exports.getAssignedComplaints = async (req, res, next) => {
+  try {
+    const filter = { assignedAuthorityId: req.user._id };
+    const { status } = req.query;
+
+    if (status) {
+      if (!STATUSES.includes(status)) {
+        return res.status(400).json({ message: 'Invalid status filter' });
+      }
+      filter.status = status;
+    }
+
+    const complaints = await Complaint.find(filter)
+      .populate('citizenId', 'name email')
+      .sort({ updatedAt: -1 });
+
+    res.json({ complaints: complaints.map(sanitizeComplaintListItem) });
+  } catch (err) {
+    next(err);
+  }
 };
 
-exports.updateComplaintStatus = (req, res) => {
-  res.status(501).json({ message: 'Not implemented: PUT /api/complaints/:id/status (Stage 7, FR-5.2)' });
+const AUTHORITY_UPDATE_STATUSES = ['In Progress', 'Resolved', 'Unable to Resolve'];
+const AUTHORITY_UPDATABLE_FROM = ['Assigned', 'In Progress'];
+
+exports.updateComplaintStatus = async (req, res, next) => {
+  try {
+    const { status, note } = req.body;
+
+    if (!status || !AUTHORITY_UPDATE_STATUSES.includes(status)) {
+      return res.status(400).json({
+        message: 'Status must be one of: In Progress, Resolved, Unable to Resolve',
+      });
+    }
+
+    if (!note?.trim()) {
+      return res.status(400).json({ message: 'Progress note is required' });
+    }
+
+    const complaint = await Complaint.findById(req.params.id);
+    if (!complaint) {
+      return res.status(404).json({ message: 'Complaint not found' });
+    }
+
+    if (complaint.assignedAuthorityId?.toString() !== req.user._id.toString()) {
+      return res.status(403).json({ message: 'Forbidden' });
+    }
+
+    if (!AUTHORITY_UPDATABLE_FROM.includes(complaint.status)) {
+      return res.status(400).json({
+        message: `Cannot update status from "${complaint.status}"`,
+      });
+    }
+
+    await applyStatusChange(complaint, {
+      status,
+      changedBy: req.user._id,
+      note: note.trim(),
+    });
+
+    const updated = await loadComplaintDetail(complaint._id);
+    res.json({ complaint: sanitizeComplaintDetail(updated) });
+  } catch (err) {
+    next(err);
+  }
 };

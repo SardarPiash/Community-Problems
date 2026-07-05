@@ -1,3 +1,4 @@
+const mongoose = require('mongoose');
 const Notification = require('../models/Notification');
 
 function sanitizeNotification(notification) {
@@ -29,6 +30,26 @@ exports.listNotifications = async (req, res, next) => {
   }
 };
 
-exports.markAsRead = (req, res) => {
-  res.status(501).json({ message: 'Not implemented: PUT /api/notifications/:id/read (Stage 7, FR-6.2)' });
+exports.markAsRead = async (req, res, next) => {
+  try {
+    if (!mongoose.Types.ObjectId.isValid(req.params.id)) {
+      return res.status(400).json({ message: 'Invalid notification ID' });
+    }
+
+    const notification = await Notification.findOne({
+      _id: req.params.id,
+      userId: req.user._id,
+    });
+
+    if (!notification) {
+      return res.status(404).json({ message: 'Notification not found' });
+    }
+
+    notification.isRead = true;
+    await notification.save();
+
+    res.json({ notification: sanitizeNotification(notification) });
+  } catch (err) {
+    next(err);
+  }
 };

@@ -51,6 +51,21 @@ npm run dev
 
 Open http://localhost:5173 — the client proxies `/api/*` to the server.
 
+### Seed test data (new machine / fresh DB)
+
+After MongoDB is running and `server/.env` is configured, run **`npm run seed`** (from the `server/` directory) to load admin, authority, citizen accounts and sample complaints:
+
+```bash
+cd server
+npm install
+npm run seed
+```
+
+**Quick copy:** from the project root, run **`cd server && npm run seed`**
+
+Creates admin, authority, and citizen test accounts plus sample complaints in varied statuses. Re-running seed replaces all `@cprs.local` users and their data.  
+**Credentials:** see [`docs/SEED.md`](docs/SEED.md).
+
 ## API route groups (SRS Section 10)
 
 | Group | Base path | Status |
@@ -58,7 +73,7 @@ Open http://localhost:5173 — the client proxies `/api/*` to the server.
 | Auth | `/api/auth` | **Stage 2** — register, login, forgot/reset password |
 | Users | `/api/users` | **Stage 2** — `/me` profile; admin list in Stage 6 |
 | Complaints | `/api/complaints` | **Stage 3–4** — submit + citizen tracking; admin/authority in Stages 6–7 |
-| Notifications | `/api/notifications` | **Stage 4** — list (FR-3.3); mark read in Stage 7 |
+| Notifications | `/api/notifications` | **Stage 4/7** — list + mark read (FR-6.2) |
 | Analytics | `/api/analytics` | **Stage 6** — admin summary (FR-4.5); CSV export in Stage 8 |
 
 ### Auth endpoints (Stage 2)
@@ -94,16 +109,6 @@ Complaint images are stored on local disk under `server/uploads/` and served at 
 
 Status changes in Stages 6–7 use `server/src/utils/statusChange.js` to append history and create citizen notifications automatically.
 
-## Seed data (Stage 5)
-
-```bash
-cd server
-npm run seed
-```
-
-Creates admin, authority, and citizen test accounts plus sample complaints in varied statuses.  
-**Credentials:** see [`docs/SEED.md`](docs/SEED.md).
-
 ### Admin dashboard (Stage 6)
 
 Log in as `admin@cprs.local` → http://localhost:5173/admin
@@ -116,3 +121,15 @@ Log in as `admin@cprs.local` → http://localhost:5173/admin
 | GET | `/api/users` | Admin — list citizen & authority accounts; `?role=citizen\|authority` |
 | PUT | `/api/users/:id/status` | Admin — body: `{ status: "active" \| "disabled" }` |
 | GET | `/api/analytics/summary` | Admin — volume by category/status, resolved %, avg resolution days |
+
+### Authority panel (Stage 7)
+
+Log in as `authority.roads@cprs.local` → http://localhost:5173/assigned
+
+| Method | Route | Access |
+|--------|-------|--------|
+| GET | `/api/complaints/assigned` | Authority — complaints assigned to you; `?status=` filter |
+| PUT | `/api/complaints/:id/status` | Authority — body: `{ status, note }` (In Progress, Resolved, Unable to Resolve) |
+| PUT | `/api/notifications/:id/read` | Authenticated — mark notification as read |
+
+Status updates append to `statusHistory`, notify the citizen in-app, and optionally email when SMTP is configured (FR-6.3).

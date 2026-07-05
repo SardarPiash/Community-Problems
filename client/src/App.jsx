@@ -2,6 +2,7 @@ import { Routes, Route } from 'react-router-dom';
 import Layout from './components/Layout.jsx';
 import ProtectedRoute from './components/ProtectedRoute.jsx';
 import AdminRoute from './components/AdminRoute.jsx';
+import AuthorityRoute from './components/AuthorityRoute.jsx';
 import Home from './pages/Home.jsx';
 import Login from './pages/Login.jsx';
 import Register from './pages/Register.jsx';
@@ -12,6 +13,7 @@ import SubmitComplaint from './pages/SubmitComplaint.jsx';
 import MyComplaints from './pages/MyComplaints.jsx';
 import ComplaintDetail from './pages/ComplaintDetail.jsx';
 import AdminDashboard from './pages/admin/AdminDashboard.jsx';
+import AuthorityAssigned from './pages/authority/AuthorityAssigned.jsx';
 import Placeholder from './pages/Placeholder.jsx';
 
 export default function App() {
@@ -29,6 +31,14 @@ export default function App() {
             <AdminRoute>
               <AdminDashboard />
             </AdminRoute>
+          }
+        />
+        <Route
+          path="/assigned"
+          element={
+            <AuthorityRoute>
+              <AuthorityAssigned />
+            </AuthorityRoute>
           }
         />
         <Route
