@@ -93,3 +93,13 @@ Complaint images are stored on local disk under `server/uploads/` and served at 
 | GET | `/api/notifications` | JWT — in-app notifications for status changes (FR-3.3) |
 
 Status changes in Stages 6–7 use `server/src/utils/statusChange.js` to append history and create citizen notifications automatically.
+
+## Seed data (Stage 5)
+
+```bash
+cd server
+npm run seed
+```
+
+Creates admin, authority, and citizen test accounts plus sample complaints in varied statuses.  
+**Credentials:** see [`docs/SEED.md`](docs/SEED.md).
