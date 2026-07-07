@@ -153,19 +153,24 @@ function buildAdminFilter(req) {
   return { filter };
 }
 
+function refId(value) {
+  if (!value) return null;
+  return (value._id || value).toString();
+}
+
 function canAccessComplaint(complaint, user) {
   if (user.role === 'admin') {
     return true;
   }
 
   if (user.role === 'citizen') {
-    return complaint.citizenId.toString() === user._id.toString();
+    return refId(complaint.citizenId) === user._id.toString();
   }
 
   if (user.role === 'authority') {
     return (
       complaint.assignedAuthorityId &&
-      complaint.assignedAuthorityId.toString() === user._id.toString()
+      refId(complaint.assignedAuthorityId) === user._id.toString()
     );
   }
 
